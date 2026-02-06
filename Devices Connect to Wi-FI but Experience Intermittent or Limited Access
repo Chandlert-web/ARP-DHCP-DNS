@@ -1,0 +1,133 @@
+Problem Description
+
+Teachers reported that laptops and tablets were able to connect to Wi-Fi, but students experienced intermittent access to instructional platforms, slow logins, and failures reaching internal systems by name.
+
+The issue affected multiple classrooms but not the entire district.
+
+Initial Assessment (Core Services Suspected)
+
+Because:
+
+Devices were physically connected
+
+Wireless association was successful
+
+Failures were inconsistent and application-specific
+
+This pointed away from physical or switching issues and toward core network services:
+DHCP, DNS, and ARP.
+
+Step 1: Validate DHCP Address Assignment
+Command (Client Side)
+ipconfig /all
+
+Expected Output
+IPv4 Address. . . . . . . . . . . : 169.254.32.18
+Subnet Mask . . . . . . . . . . . : 255.255.0.0
+Default Gateway . . . . . . . . . :
+DHCP Enabled. . . . . . . . . . . : Yes
+
+Explanation
+
+169.254.x.x indicates APIPA
+
+Device did not receive a lease from DHCP
+
+No gateway assigned → device cannot route traffic
+
+Confirms DHCP failure
+
+Step 2: Validate DHCP Scope Availability (Network Side)
+Command
+show ip dhcp binding
+
+Expected Output
+IP address      Client-ID/Lease expiration
+10.10.50.1      0100.1a2b.3c4d.5e
+10.10.50.2      0100.1a2b.3c4d.5f
+...
+
+Explanation
+
+Scope is nearly exhausted
+
+New devices cannot obtain leases
+
+Explains intermittent behavior across classrooms
+
+Corrective Action: Restore DHCP Availability
+Action Taken
+
+Expanded DHCP scope
+
+Cleared stale leases
+
+clear ip dhcp binding *
+
+
+Configuration actions do not return output. Validation follows.
+
+Step 3: Revalidate DHCP Assignment
+Command
+ipconfig /all
+
+Expected Output
+IPv4 Address. . . . . . . . . . . : 10.10.50.42
+Subnet Mask . . . . . . . . . . . : 255.255.255.0
+Default Gateway . . . . . . . . . : 10.10.50.1
+DNS Servers . . . . . . . . . . . : 10.10.1.10
+
+Explanation
+
+Device now has a valid address
+
+Correct subnet and gateway
+
+DHCP service restored successfully
+
+Step 4: Validate DNS Resolution
+Command
+nslookup internal-portal.school.local
+
+Expected Output
+Server:  dns01.school.local
+Address: 10.10.1.10
+
+Name:    internal-portal.school.local
+Address: 10.10.60.15
+
+Explanation
+
+DNS server is reachable
+
+Name resolves correctly to an IP
+
+Rules out DNS failure for this request
+
+Step 5: Validate ARP Resolution (Local Connectivity)
+Command
+arp -a
+
+Expected Output
+10.10.50.1      00-1c-73-9a-b4-22     dynamic
+
+Explanation
+
+Gateway MAC address successfully resolved
+
+Confirms Layer 2–Layer 3 handoff
+
+No ARP cache instability present
+
+Resolution Summary
+Technical Summary
+
+The issue was caused by DHCP scope exhaustion, which prevented devices from receiving valid network configuration. After restoring DHCP availability and validating DNS and ARP behavior, normal connectivity and application access were restored.
+
+Non-Technical Summary
+
+Devices were connecting to Wi-Fi but were not receiving the information needed to fully access the network. Once that information was restored, access returned to normal.
+
+Key Takeaway
+
+Core network services may fail silently, but their impact is immediate and widespread. Validating DHCP, DNS, and ARP early prevents misdiagnosis and unnecessary changes.
